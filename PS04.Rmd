@@ -1,6 +1,6 @@
 ---
 title: "STAT/MATH 495: Problem Set 04"
-author: "WRITE YOUR NAME HERE"
+author: "Sarah Teichman"
 date: "2017-10-03"
 output:
   html_document:
@@ -9,6 +9,7 @@ output:
     toc_depth: 2
     collapsed: false
     smooth_scroll: false
+    df_print: kable 
 ---
 
 ```{r setup, include=FALSE}
@@ -25,6 +26,7 @@ Please indicate who you collaborated with on this assignment:
 
 ```{r, warning=FALSE}
 library(tidyverse)
+library(Metrics)
 credit <- read_csv("http://www-bcf.usc.edu/~gareth/ISL/Credit.csv") %>%
   select(-X1) %>%
   mutate(ID = 1:n()) %>% 
@@ -63,8 +65,29 @@ RMSE_train <- runif(n=7)
 RMSE_test <- runif(n=7)
 
 
-# Do your work here:
+# function to fit a model on the training data, predict y-hat for both the training and 
+# the test data, and return the rmse for both sets of predictions
+changeRMSE <- function(train_data=credit_train,test_data=credit_test,formula) {
+  mod <- lm(formula,train_data)
+  out_tr <- predict(mod,train_data)
+  out_te <- predict(mod,test_data)
+  rmse_tr <- rmse(train_data$Balance,out_tr)
+  rmse_te <- rmse(test_data$Balance,out_te)
+  return(c(rmse_tr,rmse_te))
+}
 
+# list of all of the model formulas to call within replaceVal
+form <- c(model1_formula,model2_formula,model3_formula,model4_formula,model5_formula,model6_formula,model7_formula)
+
+# function to return the rmse for a specific model, indexed by i from 1 to 7
+replaceVal <- function(i) {
+  temp <- changeRMSE(formula=form[[i]])
+  return(temp)
+}
+# call to replaceVal, to get the rmse values for the predictions for each of the 7 models
+x <- lapply(c(1:7),replaceVal)
+RMSE_train <- lapply(x, function(x){x[[1]]}) %>% unlist()
+RMSE_test <- lapply(x, function(x){x[[2]]}) %>% unlist()
 
 # Save results in a data frame. Note this data frame is in wide format.
 results <- data_frame(
@@ -86,15 +109,14 @@ results <- results %>%
 
 ggplot(results, aes(x=num_coefficients, y=RMSE, col=type)) +
   geom_line() + 
-  labs(x="# of coefficients", y="RMSE", col="Data used to evaluate \nperformance of fitted model")
+  labs(x="# of coefficients", y="RMSE", col="Data used to evaluate \nperformance of fitted model") +
+  ggtitle("RMSE by Number of Coefficients for Small Training Set")
 ```
 
 
 # Interpret the graph
 
-Compare and contrast the two curves and hypothesize as to the root cause of any differences.
-
-
+This graph shows that the rmse for both the training and testing set drops when the model has three coefficients instead of four. The test data rmse starts off higher than the training data rmse, which makes sense because the model is being fit to the training set. After four coefficients, the rmse for the training data gradually gets lower as more coefficients are added, while the rmse for the test data starts to rise. This is because a model with five or more coefficients is overfitting the data. This means that it is getting too specific to the training data, while losing the ability to generalize to the test data. This is especially true because the training set is so small. As the number of coefficients gets closer to the number of data points, overfitting gets more dramatic, and the accuracy of the predictions on the test set gets lower. 
 
 # Bonus
 
@@ -103,5 +125,64 @@ from `credit` instead of 20. Now compare and contrast this graph with the
 one above and hypothesize as to the root cause of any differences.
 
 ```{r, echo=FALSE}
+credit_train <- credit %>% 
+  sample_n(380)
+credit_test <- credit %>% 
+  anti_join(credit_train, by="ID")
+# Placeholder vectors of length 7. For now, I've filled them with arbitrary 
+# values; you will fill these in
+RMSE_train <- runif(n=7)
+RMSE_test <- runif(n=7)
 
+
+# function that makes a linear model based on the training data, uses this to get y-hat 
+# values for the training and test set, and then computes the rmse for both data sets
+# it returns a vector of these two values
+changeRMSE <- function(train_data=credit_train,test_data=credit_test,formula) {
+  mod <- lm(formula,train_data)
+  out_tr <- predict(mod,train_data)
+  out_te <- predict(mod,test_data)
+  rmse_tr <- rmse(train_data$Balance,out_tr)
+  rmse_te <- rmse(test_data$Balance,out_te)
+  return(c(rmse_tr,rmse_te))
+}
+
+# vector holding the 7 model formulas
+form <- c(model1_formula,model2_formula,model3_formula,model4_formula,model5_formula,model6_formula,model7_formula)
+
+# function that given the model number, returns the values from changeRMSE for that model
+replaceVal <- function(i) {
+  temp <- changeRMSE(formula=form[[i]])
+  return(temp)
+}
+
+# a list of the results of replaceVal for models 1-7
+x <- lapply(c(1:7),replaceVal)
+RMSE_train <- lapply(x, function(x){x[[1]]}) %>% unlist()
+RMSE_test <- lapply(x, function(x){x[[2]]}) %>% unlist()
+
+# Save results in a data frame. Note this data frame is in wide format.
+results <- data_frame(
+  num_coefficients = 1:7,
+  RMSE_train,
+  RMSE_test
+) 
+
+# Some cleaning of results
+results <- results %>% 
+  # More intuitive names:
+  rename(
+    `Training data` = RMSE_train,
+    `Test data` = RMSE_test
+  ) %>% 
+  # Convert results data frame to "tidy" data format i.e. long format, so that we
+  # can ggplot it
+  gather(type, RMSE, -num_coefficients)
+
+ggplot(results, aes(x=num_coefficients, y=RMSE, col=type)) +
+  geom_line() + 
+  labs(x="# of coefficients", y="RMSE", col="Data used to evaluate \nperformance of fitted model") +
+  ggtitle("RMSE by Number of Coefficients for Large Training Set")
 ```
+
+This plot does not show the same overfitting as above. This is because the sizes of the test set and training set have been switched. Because the training set now has 380 observations (instead of 20), the number of coefficients is only a small fraction of the number of observations. Since there is much more data being fit for the same number of coefficients, the change from four to five coefficient, and five to seven does not have the same effect as before. 
