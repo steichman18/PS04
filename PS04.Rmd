@@ -19,7 +19,7 @@ set.seed(76)
 
 # Collaboration
 
-Please indicate who you collaborated with on this assignment:
+Please indicate who you collaborated with on this assignment: I didn't work with anyone on this assignment. 
 
 
 # Load packages, data, model formulas
@@ -135,27 +135,6 @@ RMSE_train <- runif(n=7)
 RMSE_test <- runif(n=7)
 
 
-# function that makes a linear model based on the training data, uses this to get y-hat 
-# values for the training and test set, and then computes the rmse for both data sets
-# it returns a vector of these two values
-changeRMSE <- function(train_data=credit_train,test_data=credit_test,formula) {
-  mod <- lm(formula,train_data)
-  out_tr <- predict(mod,train_data)
-  out_te <- predict(mod,test_data)
-  rmse_tr <- rmse(train_data$Balance,out_tr)
-  rmse_te <- rmse(test_data$Balance,out_te)
-  return(c(rmse_tr,rmse_te))
-}
-
-# vector holding the 7 model formulas
-form <- c(model1_formula,model2_formula,model3_formula,model4_formula,model5_formula,model6_formula,model7_formula)
-
-# function that given the model number, returns the values from changeRMSE for that model
-replaceVal <- function(i) {
-  temp <- changeRMSE(formula=form[[i]])
-  return(temp)
-}
-
 # a list of the results of replaceVal for models 1-7
 x <- lapply(c(1:7),replaceVal)
 RMSE_train <- lapply(x, function(x){x[[1]]}) %>% unlist()
@@ -185,4 +164,4 @@ ggplot(results, aes(x=num_coefficients, y=RMSE, col=type)) +
   ggtitle("RMSE by Number of Coefficients for Large Training Set")
 ```
 
-This plot does not show the same overfitting as above. This is because the sizes of the test set and training set have been switched. Because the training set now has 380 observations (instead of 20), the number of coefficients is only a small fraction of the number of observations. Since there is much more data being fit for the same number of coefficients, the change from four to five coefficient, and five to seven does not have the same effect as before. 
+This plot does not show the same overfitting as above. This is because the sizes of the test set and training set have been switched. Because the training set now has 380 observations (instead of 20), the number of coefficients is only a small fraction of the number of observations. Since there is much more data being fit for the same number of coefficients, the change from four to five coefficient, and five to seven does not have the same effect as before. The test set also has a lower error for the larger models than the training set. This could be because there are so many more points in the training set, so there is likely a larger spread away from the fitted model and therefore a higher RMSE. 
